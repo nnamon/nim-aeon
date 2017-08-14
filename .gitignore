@@ -1,0 +1,4 @@
+nimcache
+*.view
+/monero/monero_vanity
+/tests/crypto_tests
