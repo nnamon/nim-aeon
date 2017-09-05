@@ -10,3 +10,10 @@ skipDirs = @["tests"]
 
 task crypto_tests, "Runs the crypto tests":
   exec "nim c -r tests/crypto_tests"
+
+task docs, "Generate documentation and create git tag":
+  exec "nim doc2 monero/address.nim"
+  exec "nim doc2 monero/base58.nim"
+  exec "nim doc2 monero/crypto_ops.nim"
+  exec "nim doc2 monero/crypto.nim"
+  exec "nim doc2 monero/mnemonics.nim"
