@@ -8,8 +8,9 @@ requires "nim >= 0.17.1"
 bin = @["monero/monero_vanity"]
 skipDirs = @["tests"]
 
-task crypto_tests, "Runs the crypto tests":
+task tests, "Runs tests":
   exec "nim c -r tests/crypto_tests"
+  exec "nim c -r tests/mnemonic_tests"
 
 task docs, "Generate documentation and create git tag":
   exec "nim doc2 monero/address.nim"

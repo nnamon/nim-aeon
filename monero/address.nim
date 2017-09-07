@@ -1,6 +1,6 @@
 import crypto, hex, base58
 
-export `$`, check, PublicKey
+export `$`, decodeSecret, check, PublicKey
 
 import sha3
 

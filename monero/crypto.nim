@@ -20,6 +20,10 @@ type
   
 proc `$`*(k: SecretKey): string = hex.encode k
 
+proc decodeSecret*(h: string): SecretKey =
+  ## Decode a hexdecimal encoded key.
+  hex.decode h, result
+
 proc check*(sk: SecretKey) =
   ## Takes as input some data and converts to a point on ed25519.
   if sc_check(sk) != 0:
