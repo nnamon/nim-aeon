@@ -1,0 +1,173 @@
+set build_components {
+	init
+	app/monero_vanity
+	lib/vfs/fatfs
+	lib/vfs/jitterentropy
+}
+
+build $build_components
+
+create_boot_directory
+
+exec cp -f [genode_dir]/repos/os/src/server/input_filter/en_us.chargen bin/
+exec cp -f [genode_dir]/repos/os/src/server/input_filter/de.chargen bin/
+
+import_from_depot \
+	genodelabs/src/[base_src] \
+	genodelabs/pkg/[drivers_interactive_pkg] \
+	genodelabs/src/input_filter \
+	genodelabs/src/vfs \
+	genodelabs/src/terminal \
+
+set config {
+<config prio_levels="4">
+	<parent-provides>
+		<service name="CPU"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="IRQ"/>
+		<service name="LOG"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="ROM"/>
+		<service name="TRACE"/>
+	</parent-provides>
+	<default caps="128"/>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<start name="timer" caps="64">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Timer"/> </provides>
+	</start>
+	<start name="acpi_drv" caps="128" priority="-1">
+		<resource name="RAM" quantum="2M"/>
+		<route>
+			<service name="IO_MEM"> <parent/> </service>
+			<service name="LOG">    <parent/> </service>
+			<service name="PD">     <parent/> </service>
+			<service name="RM">     <parent/> </service>
+			<service name="CPU">    <parent/> </service>
+			<service name="ROM">    <parent/> </service>
+			<service name="Report"> <child name="report_rom"/> </service>
+		</route>
+	</start>
+	<start name="report_rom" priority="-1">
+		<resource name="RAM" quantum="1M"/>
+		<provides>
+			<service name="ROM" />
+			<service name="Report" />
+		</provides>
+		<config>
+			<policy label="platform_drv -> acpi" report="acpi_drv -> acpi"/>
+		</config>
+		<route>
+			<service name="LOG"> <parent/> </service>
+			<service name="PD">  <parent/> </service>
+			<service name="CPU"> <parent/> </service>
+			<service name="ROM"> <parent/> </service>
+		</route>
+	</start>
+	<start name="platform_drv" caps="200" priority="-1">
+		<resource name="RAM" quantum="3M" constrain_phys="yes"/>
+		<provides>
+			<service name="Platform"/>
+			<service name="Acpi"/>
+		</provides>
+		<route>
+			<service name="ROM" label="system"> <child name="report_rom"/> </service>
+			<service name="ROM" label="acpi">   <child name="report_rom"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+		<config>
+			<policy label_prefix="ps2_drv">  <device name="PS2"/> </policy>
+			<policy label_prefix="fb_drv">   <pci class="VGA"/> </policy>
+			<policy label_prefix="usb_drv">  <pci class="USB"/> </policy>
+		</config>
+	</start>
+	<start name="fb_drv" caps="256" priority="-1">
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="Framebuffer"/></provides>
+	</start>
+	<start name="ps2_drv" priority="-1">
+		<resource name="RAM" quantum="1M"/>
+		<provides> <service name="Input"/> </provides>
+	</start>
+	<start name="usb_drv" caps="120" priority="-1">
+		<resource name="RAM" quantum="14M"/>
+		<provides>
+			<service name="Block"/>
+			<service name="Input"/>
+		</provides>
+		<resource name="RAM" quantum="12M"/>
+		<provides> <service name="Block"/> </provides>
+		<config uhci="yes" ohci="yes" ehci="yes" xhci="yes">
+			<hid/>
+			<storage />
+		</config>
+	</start>
+	<start name="input_filter" priority="-1">
+		<resource name="RAM" quantum="2M"/>
+		<provides> <service name="Input"/> </provides>
+		<route>
+			<service name="ROM" label="config"> <parent label="input_filter.config"/> </service>
+			<service name="Input" label="ps2"> <child name="ps2_drv"/> </service>
+			<service name="Input" label="usb"> <child name="usb_drv"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="terminal" priority="-1">
+		<resource name="RAM" quantum="2M"/>
+		<provides><service name="Terminal"/></provides>
+		<config>
+			<font size="16" />
+			<keyboard layout="none"/>
+		</config>
+		<route>
+			<service name="Input"> <child name="input_filter"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<!-- host the FAT plugin outside of the secret key address space -->
+	<start name="fat_fs" priority="-1">
+		<binary name="vfs"/>
+		<resource name="RAM" quantum="4M"/>
+		<provides><service name="File_system"/></provides>
+		<config>
+			<vfs> <fatfs/> </vfs>
+			<policy label_prefix="monero_vanity" writeable="yes"/>
+		</config>
+	</start>
+	<start name="monero_vanity" priority="-2">
+		<resource name="RAM" quantum="10M"/>
+		<config>
+			<vfs>
+				<fs/>
+				<dir name="dev">
+					<jitterentropy name="random"/>
+					<terminal/>
+					<log/>
+				</dir>
+			</vfs>
+			<libc stdin="/dev/terminal" stdout="/dev/terminal" stderr="/dev/log"/>
+		</config>
+	</start>
+</config>
+}
+
+install_config $config
+
+set boot_modules {
+	ld.lib.so
+	init
+	vfs_fatfs.lib.so
+	vfs_jitterentropy.lib.so
+	libc.lib.so
+	monero_vanity
+}
+
+build_boot_image $boot_modules
+
+append qemu_args  "-smp 2,cores=2"
+
+run_genode_until forever
