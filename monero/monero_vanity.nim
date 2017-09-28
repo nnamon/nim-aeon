@@ -17,10 +17,10 @@ proc found(key: SpendSecret) =
     stdout.writeLine "\n", b56Addr
     let words = key.keyToWords
     stdout.writeLine "\n",
-      words[0..3].join(" "), "\n",
-      words[4..7].join(" "), "\n",
-      words[8..11].join(" "), "\n",
-      words[words.high]
+      words[0..7].join(" "), "\n",
+      words[8..15].join(" "), "\n",
+      words[16..23].join(" "), "\n",
+      words[24]
     writeFile(b56Addr & ".view", $view & "\n")
     stdout.writeLine FinalMsg
 

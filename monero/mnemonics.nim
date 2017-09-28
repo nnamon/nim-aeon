@@ -1,9 +1,8 @@
-import address
-
-import endians, strutils
+import address,
+  endians, strutils
 
 type Crc32* = uint32
-const InitCrc32* = 0xffffffff'u32
+const InitCrc32* = Crc32(-1)
 
 proc createCrcTable(): array[0..255, Crc32] =
   for i in 0..255:
@@ -14,10 +13,10 @@ proc createCrcTable(): array[0..255, Crc32] =
     result[i] = rem
 
 const crc32table = createCrcTable()
- 
-proc crc32(s: string): Crc32 =
+
+proc crc32(buf: openArray[char]): Crc32 =
   result = InitCrc32
-  for c in s:
+  for c in buf:
     result = (result shr 8) xor crc32table[(result and 0xff) xor ord(c)]
   result = not result
 
