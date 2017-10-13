@@ -1,4 +1,4 @@
-import address, mnemonics, pcg, base58, crypto
+import address, mnemonics, pcg, base58.cryptonote, crypto
 import strutils, threadpool, cpuInfo, locks
 
 const FinalMsg = """
@@ -26,7 +26,7 @@ proc found(key: SpendSecret) =
 
 proc bruteforce(index, seed: uint64; prefix: string) =
   var
-    b58 = newString(base58.FullEncodedBlockSize)
+    b58 = newString(cryptonote.FullEncodedBlockSize)
     buf: array[33, uint8]
     key: SpendSecret
     pcg = Pcg32(state: seed, inc: index)
@@ -37,7 +37,7 @@ proc bruteforce(index, seed: uint64; prefix: string) =
       copyMem(addr key[i], addr x, sizeof(uint32))
     key.reduce
     key.toPublicKey cast[var PublicKey](addr buf[1])
-    base58.encodeBlock(b58, 0, buf, 0, FullBlockSize)
+    cryptonote.encodeBlock(b58, 0, buf, 0, FullBlockSize)
     if b58.continuesWith(prefix, 2):
       withSecret key:
         chan.send key
@@ -54,7 +54,7 @@ when defined(genode):
     while off < (prefix.len-2):
       if stdin.readChars(prefix, off, 1) == 1:
         let c = prefix[off]
-        if not base58.Alphabet.contains(c):
+        if not cryptonote.Alphabet.contains(c):
           if c in NewLines:
             break input
           elif c == 0x08.char and off > 0:
@@ -77,7 +77,7 @@ else:
     quit 1
   let prefix = params[0]
   for c in prefix.items:
-    if not base58.Alphabet.contains(c):
+    if not cryptonote.Alphabet.contains(c):
       stderr.writeLine "character '", c, "' not in base56 alphabet"
       quit 1
   stdout.writeLine "gathering entropy and bruteforcing '", prefix, "'..."

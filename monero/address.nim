@@ -1,4 +1,4 @@
-import crypto, hex, base58
+import crypto, hex, base58.cryptonote
 
 export `$`, decodeSecret, check, PublicKey
 
@@ -52,4 +52,4 @@ proc `$`*(a: Address): string =
   for i in 0..3:
     buf[i+65] = digest[i]
 
-  base58.encode(buf)
+  cryptonote.encode(buf)
