@@ -39,6 +39,9 @@ proc bruteforce(index, seed: uint64; prefix: string) =
     key.toPublicKey cast[var PublicKey](addr buf[1])
     cryptonote.encodeBlock(b58, 0, buf, 0, FullBlockSize)
     if b58.continuesWith(prefix, 2):
+      # The first two characters of the address will contain a subset
+      # of the base58 alphabet, skip them rather than wait for patterns
+      # that will never occur
       withSecret key:
         chan.send key
       break
