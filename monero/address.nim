@@ -32,7 +32,7 @@ proc address*(spend: SpendSecret): Address =
   withSecret view:
     result = address(spend, view)
 
-const NetworkTag* = 0x12
+const NetworkTag* = 0xB2
 
 proc `$`*(a: Address): string =
   # not very efficient
